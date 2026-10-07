@@ -1,4 +1,10 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from pathlib import Path
+from uuid import uuid4
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from app.services.file_processor import read_geospatial_file
+
 
 router = APIRouter(
     prefix="/api/files",
@@ -6,8 +12,13 @@ router = APIRouter(
 )
 
 
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+
 @router.post("/")
 async def upload_file(file: UploadFile = File(...)):
+
     if not file.filename:
         raise HTTPException(
             status_code=400,
@@ -24,8 +35,34 @@ async def upload_file(file: UploadFile = File(...)):
             detail="Only .kml and .zip files are supported."
         )
 
-    return {
-        "filename": file.filename,
-        "content_type": file.content_type,
-        "message": "File received successfully."
-    }
+    file_id = str(uuid4())
+
+    extension = Path(filename).suffix
+
+    saved_file = UPLOAD_DIR / f"{file_id}{extension}"
+
+    try:
+        contents = await file.read()
+
+        saved_file.write_bytes(contents)
+
+        gdf = read_geospatial_file(saved_file)
+
+        return {
+            "id": file_id,
+            "filename": file.filename,
+            "feature_count": len(gdf),
+            "crs": str(gdf.crs) if gdf.crs else None,
+            "geometry_types": gdf.geometry.geom_type.unique().tolist(),
+            "message": "File processed successfully."
+        }
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unable to process geospatial file: {str(exc)}"
+        )
+
+    finally:
+        if saved_file.exists():
+            saved_file.unlink()
