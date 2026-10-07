@@ -1,5 +1,5 @@
 import geopandas as gpd
-
+from app.services.serialization import make_json_safe
 
 def calculate_measurements(
     gdf: gpd.GeoDataFrame,
@@ -10,32 +10,37 @@ def calculate_measurements(
 
     measurements = []
 
-    for index, row in projected_gdf.iterrows():
+    original_crs = str(gdf.crs) if gdf.crs else None
+
+    for index, row in gdf.iterrows():
 
         geometry = row.geometry
         geometry_type = geometry.geom_type
 
+        projected_geometry = projected_gdf.loc[index].geometry
+
+        properties = {
+            key: make_json_safe(value)
+            for key, value in row.items()
+            if key != "geometry"
+        }
+
         result = {
-            "feature_id": index,
+            "feature_id": make_json_safe(index),
             "geometry_type": geometry_type,
+            "geometry": geometry.__geo_interface__,
+            "crs": original_crs,
+            "properties": properties,
             "measurement": None,
             "unit": None,
         }
 
-        if geometry_type == "Polygon":
-            result["measurement"] = geometry.area
+        if geometry_type in {"Polygon", "MultiPolygon"}:
+            result["measurement"] = projected_geometry.area
             result["unit"] = "square_meters"
 
-        elif geometry_type == "MultiPolygon":
-            result["measurement"] = geometry.area
-            result["unit"] = "square_meters"
-
-        elif geometry_type == "LineString":
-            result["measurement"] = geometry.length
-            result["unit"] = "meters"
-
-        elif geometry_type == "MultiLineString":
-            result["measurement"] = geometry.length
+        elif geometry_type in {"LineString", "MultiLineString"}:
+            result["measurement"] = projected_geometry.length
             result["unit"] = "meters"
 
         measurements.append(result)

@@ -5,8 +5,9 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.services.crs import get_measurement_crs
 from app.services.file_processor import read_geospatial_file
-from app.services.storage import save_file_record
+from app.services.storage import save_file_record, get_file_record
 
+from app.services.measurement import calculate_measurements
 
 router = APIRouter(
     prefix="/api/files",
@@ -52,6 +53,11 @@ async def upload_file(file: UploadFile = File(...)):
         # Determine CRS used for measurements
         measurement_crs = get_measurement_crs(gdf)
 
+        measurements = calculate_measurements(
+            gdf,
+            measurement_crs
+        )
+
         record = {
             "id": file_id,
             "filename": file.filename,
@@ -59,7 +65,8 @@ async def upload_file(file: UploadFile = File(...)):
             "crs": str(gdf.crs) if gdf.crs else None,
             "measurement_crs": measurement_crs,
             "geometry_types": gdf.geometry.geom_type.unique().tolist(),
-            "status": "COMPLETED"
+            "status": "COMPLETED",
+            "measurements": measurements
         }
 
         save_file_record(file_id, record)
@@ -91,3 +98,23 @@ def get_file(file_id: str):
         )
 
     return record 
+
+
+@router.get("/{file_id}/measurements")
+def get_measurements(file_id: str):
+
+    record = get_file_record(file_id)
+
+    if record is None:
+        raise HTTPException(
+            status_code=404,
+            detail="File not found."
+        )
+
+    return {
+        "file_id": file_id,
+        "filename": record["filename"],
+        "measurement_crs": record["measurement_crs"],
+        "feature_count": record["feature_count"],
+        "measurements": record["measurements"]
+    }
