@@ -3,7 +3,9 @@ from uuid import uuid4
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
+from app.services.crs import get_measurement_crs
 from app.services.file_processor import read_geospatial_file
+from app.services.storage import save_file_record
 
 
 router = APIRouter(
@@ -36,26 +38,33 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
     file_id = str(uuid4())
-
     extension = Path(filename).suffix
 
     saved_file = UPLOAD_DIR / f"{file_id}{extension}"
 
     try:
         contents = await file.read()
-
         saved_file.write_bytes(contents)
 
+        # Read geospatial data
         gdf = read_geospatial_file(saved_file)
 
-        return {
+        # Determine CRS used for measurements
+        measurement_crs = get_measurement_crs(gdf)
+
+        record = {
             "id": file_id,
             "filename": file.filename,
             "feature_count": len(gdf),
             "crs": str(gdf.crs) if gdf.crs else None,
+            "measurement_crs": measurement_crs,
             "geometry_types": gdf.geometry.geom_type.unique().tolist(),
-            "message": "File processed successfully."
+            "status": "COMPLETED"
         }
+
+        save_file_record(file_id, record)
+
+        return record
 
     except Exception as exc:
         raise HTTPException(
@@ -66,3 +75,19 @@ async def upload_file(file: UploadFile = File(...)):
     finally:
         if saved_file.exists():
             saved_file.unlink()
+
+
+@router.get("/{file_id}")
+def get_file(file_id: str):
+
+    from app.services.storage import get_file_record
+
+    record = get_file_record(file_id)
+
+    if record is None:
+        raise HTTPException(
+            status_code=404,
+            detail="File not found."
+        )
+
+    return record 
