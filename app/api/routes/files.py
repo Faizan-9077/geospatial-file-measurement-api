@@ -73,10 +73,16 @@ async def upload_file(file: UploadFile = File(...)):
 
         return record
 
-    except Exception as exc:
+    except ValueError as exc:
         raise HTTPException(
             status_code=400,
-            detail=f"Unable to process geospatial file: {str(exc)}"
+            detail=str(exc),
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred while processing the file.",
         )
 
     finally:
