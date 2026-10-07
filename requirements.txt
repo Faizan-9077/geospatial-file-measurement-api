@@ -28,3 +28,5 @@ typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.5
 uvicorn==0.54.0
+httpx2==2.13.1
+pytest==9.1.1
