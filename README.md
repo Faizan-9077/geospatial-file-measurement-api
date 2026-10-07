@@ -1,1372 +1,327 @@
-\# Geospatial File Measurement API
+# Geospatial File Measurement API
 
+A FastAPI backend for uploading geospatial files, extracting feature data, handling coordinate reference systems, and calculating area or length measurements.
 
+## Overview
 
-A FastAPI backend for processing geospatial files and calculating feature measurements.
+The service accepts:
 
+- `.kml` files
+- `.zip` archives containing exactly one Shapefile
 
+For each feature, the API returns geometry metadata, source CRS information, properties, and a measurement when applicable.
 
-The API accepts \*\*KML files\*\* and \*\*ZIP archives containing Shapefiles\*\*, extracts feature information, handles coordinate reference systems (CRS), and calculates:
+## Setup
 
+### Prerequisites
 
+- Python 3.13+
+- `pip`
 
-\- Polygon / MultiPolygon → area
+If you are using Windows PowerShell, run the commands below from the project root:
 
-\- LineString / MultiLineString → length
-
-\- Point → no measurement
-
-\- Unsupported geometry → handled without crashing
-
-
-
-\---
-
-
-
-\## Features
-
-
-
-\- Upload `.kml` files
-
-\- Upload `.zip` files containing Shapefiles
-
-\- Extract feature geometry and attributes
-
-\- Preserve the original CRS
-
-\- Automatically select a suitable projected CRS for measurements
-
-\- Calculate area in square meters
-
-\- Calculate length in meters
-
-\- Persist processed file metadata and measurements
-
-\- Secure ZIP extraction with path-traversal protection
-
-\- Validate Shapefile components
-
-\- Reject ambiguous ZIP archives containing multiple Shapefiles
-
-\- REST APIs for upload, file retrieval, and measurements
-
-\- Automated test suite with 18 tests
-
-
-
-\---
-
-
-
-\## Tech Stack
-
-
-
-\### Backend
-
-
-
-\- Python
-
-\- FastAPI
-
-\- Uvicorn
-
-
-
-\### Geospatial
-
-
-
-\- GeoPandas
-
-\- Shapely
-
-\- PyProj
-
-\- Fiona
-
-
-
-\### Data / Storage
-
-
-
-\- JSON file-based persistence
-
-\- PostgreSQL is not required for this assignment
-
-
-
-\### Testing
-
-
-
-\- Pytest
-
-\- FastAPI TestClient
-
-
-
-\---
-
-
-
-\## Project Structure
-
-
-
-```text
-
-geospatial-file-measurement-api/
-
-│
-
-├── app/
-
-│   ├── \_\_init\_\_.py
-
-│   ├── main.py
-
-│   │
-
-│   ├── api/
-
-│   │   ├── \_\_init\_\_.py
-
-│   │   └── routes/
-
-│   │       ├── \_\_init\_\_.py
-
-│   │       └── files.py
-
-│   │
-
-│   └── services/
-
-│       ├── \_\_init\_\_.py
-
-│       ├── file\_processor.py
-
-│       ├── crs.py
-
-│       ├── measurement.py
-
-│       ├── storage.py
-
-│       └── serialization.py
-
-│
-
-├── data/
-
-│   └── files.json
-
-│
-
-├── sample\_data/
-
-│   └── test.kml
-
-│
-
-├── tests/
-
-│   ├── test\_api.py
-
-│   ├── test\_file\_processor.py
-
-│   └── test\_measurement.py
-
-│
-
-├── uploads/
-
-│   └── .gitkeep
-
-│
-
-├── .gitignore
-
-├── pytest.ini
-
-├── requirements.txt
-
-└── README.md
-
+```powershell
+cd c:\Users\fk790\OneDrive\Desktop\PROJECTS\geospatial-file-measurement-api
 ```
 
+### Install dependencies
 
-
-\---
-
-
-
-\## Architecture
-
-
-
-The application separates API handling from geospatial processing.
-
-
-
-```text
-
-Client
-
-&#x20; │
-
-&#x20; │ POST /api/files/
-
-&#x20; ▼
-
-FastAPI Route
-
-&#x20; │
-
-&#x20; ▼
-
-File Processor
-
-&#x20; │
-
-&#x20; ├── KML ────────────────┐
-
-&#x20; │                        │
-
-&#x20; └── ZIP                  │
-
-&#x20;      │                   │
-
-&#x20;      ├── Safe extraction │
-
-&#x20;      ├── Find .shp       │
-
-&#x20;      ├── Validate files  │
-
-&#x20;      └── Read Shapefile  │
-
-&#x20;                          ▼
-
-&#x20;                   GeoDataFrame
-
-&#x20;                          │
-
-&#x20;                          ▼
-
-&#x20;                   CRS Detection
-
-&#x20;                          │
-
-&#x20;                          ▼
-
-&#x20;                 Projected CRS
-
-&#x20;                          │
-
-&#x20;                          ▼
-
-&#x20;                 Measurement Engine
-
-&#x20;                          │
-
-&#x20;                          ▼
-
-&#x20;                 JSON Serialization
-
-&#x20;                          │
-
-&#x20;                          ▼
-
-&#x20;                    JSON Storage
-
+```powershell
+pip install -r requirements.txt
 ```
 
+### Run locally
 
+Start the API with Uvicorn:
 
-The main responsibilities are separated into services:
-
-
-
-\- `file\_processor.py` — reads KML and safely processes ZIP/Shapefile uploads.
-
-\- `crs.py` — determines the CRS suitable for measurement.
-
-\- `measurement.py` — calculates feature measurements.
-
-\- `serialization.py` — converts values into JSON-safe representations.
-
-\- `storage.py` — persists processed file records.
-
-\- `files.py` — exposes the REST API endpoints.
-
-
-
-\---
-
-
-
-\## File Processing Flow
-
-
-
-\### KML
-
-
-
-For a KML upload:
-
-
-
-```text
-
-KML upload
-
-&#x20;  ↓
-
-GeoPandas reads KML
-
-&#x20;  ↓
-
-GeoDataFrame
-
-&#x20;  ↓
-
-CRS detection
-
-&#x20;  ↓
-
-Measurement
-
+```powershell
+uvicorn app.main:app --reload
 ```
 
+The application is available at:
 
+- `http://127.0.0.1:8000`
+- Swagger UI: `http://127.0.0.1:8000/docs`
 
-\### ZIP / Shapefile
+If `uvicorn` is not available in your shell, use:
 
-
-
-ZIP processing follows a stricter flow:
-
-
-
-```text
-
-ZIP upload
-
-&#x20;  ↓
-
-Validate ZIP member paths
-
-&#x20;  ↓
-
-Temporary extraction directory
-
-&#x20;  ↓
-
-Find .shp
-
-&#x20;  ↓
-
-Ensure exactly one Shapefile exists
-
-&#x20;  ↓
-
-Validate .shp / .shx / .dbf / .prj
-
-&#x20;  ↓
-
-GeoPandas reads .shp
-
-&#x20;  ↓
-
-CRS detection
-
-&#x20;  ↓
-
-Measurement
-
+```powershell
+python -m uvicorn app.main:app --reload
 ```
 
+### Quick verification
 
+After the server starts, confirm the app is running by opening:
 
-The extracted files are stored only in a temporary directory and are automatically removed after processing.
+- `http://127.0.0.1:8000`
+- `http://127.0.0.1:8000/docs`
 
+Then upload `sample_data/test.kml` from the Swagger UI or by using the curl example in the API section.
 
+### Using Swagger UI
 
-\---
+1. Open `http://127.0.0.1:8000/docs`.
+2. Find `POST /api/files/`.
+3. Click `Try it out`.
+4. Choose a file such as `sample_data/test.kml`.
+5. Click `Execute`.
+6. Review the JSON response returned by the API.
 
+### Run tests
 
-
-\## ZIP Security
-
-
-
-ZIP archives are not extracted blindly.
-
-
-
-Each archive member is checked before extraction. Absolute paths and paths containing `..` are rejected to prevent path traversal attacks.
-
-
-
-For example, an archive containing:
-
-
-
-```text
-
-../../evil.txt
-
+```powershell
+pytest -v
 ```
 
+## API
 
+### 1. Upload a geospatial file
 
-is rejected.
+`POST /api/files/`
 
+Upload a supported `.kml` file or `.zip` archive.
 
+Use this endpoint when testing through Swagger UI or when sending a multipart upload request from curl.
 
-The API returns an error such as:
-
-
-
-```json
-
-{
-
-&#x20; "detail": "Unable to process geospatial file: Unsafe path detected in ZIP archive: ../evil.txt"
-
-}
-
-```
-
-
-
-\### Shapefile Validation
-
-
-
-A valid Shapefile normally consists of multiple related files.
-
-
-
-This implementation validates:
-
-
-
-```text
-
-.shp
-
-.shx
-
-.dbf
-
-.prj
-
-```
-
-
-
-The `.prj` file is required because the CRS is needed for reliable measurement calculations.
-
-
-
-The API also rejects ZIP archives containing multiple `.shp` files rather than arbitrarily selecting one.
-
-
-
-\---
-
-
-
-\## CRS Handling
-
-
-
-Geospatial coordinates can be represented in geographic CRS such as:
-
-
-
-```text
-
-EPSG:4326
-
-```
-
-
-
-EPSG:4326 represents longitude and latitude in degrees.
-
-
-
-Area and length should not be calculated directly from geographic degree coordinates because degrees are angular units rather than linear measurement units.
-
-
-
-The API therefore follows this logic:
-
-
-
-```text
-
-Input GeoDataFrame
-
-&#x20;      │
-
-&#x20;      ├── Projected CRS?
-
-&#x20;      │       │
-
-&#x20;      │       └── Yes → use existing CRS
-
-&#x20;      │
-
-&#x20;      └── Geographic CRS
-
-&#x20;              │
-
-&#x20;              ▼
-
-&#x20;       Estimate suitable UTM CRS
-
-&#x20;              │
-
-&#x20;              ▼
-
-&#x20;       Transform geometries
-
-&#x20;              │
-
-&#x20;              ▼
-
-&#x20;       Calculate measurements
-
-```
-
-
-
-For example, the sample data around Bangalore uses:
-
-
-
-```text
-
-Source CRS:
-
-EPSG:4326
-
-
-
-Measurement CRS:
-
-EPSG:32643
-
-```
-
-
-
-Measurements are therefore returned in metric units.
-
-
-
-\---
-
-
-
-\## Measurement Logic
-
-
-
-\### Polygon / MultiPolygon
-
-
-
-Area is calculated after transforming the geometry into the measurement CRS.
-
-
-
-```text
-
-unit: square\_meters
-
-```
-
-
-
-\### LineString / MultiLineString
-
-
-
-Length is calculated after CRS transformation.
-
-
-
-```text
-
-unit: meters
-
-```
-
-
-
-\### Point
-
-
-
-Points do not have an area or length measurement.
-
-
-
-```json
-
-{
-
-&#x20; "measurement": null,
-
-&#x20; "unit": null
-
-}
-
-```
-
-
-
-\### Unsupported Geometry
-
-
-
-Unsupported geometry types are returned without a measurement rather than causing the complete request to fail.
-
-
-
-\---
-
-
-
-\## API Endpoints
-
-
-
-Base URL:
-
-
-
-```text
-
-http://127.0.0.1:8000
-
-```
-
-
-
-Interactive API documentation:
-
-
-
-```text
-
-http://127.0.0.1:8000/docs
-
-```
-
-
-
-\---
-
-
-
-\### 1. Upload a File
-
-
-
-```http
-
-POST /api/files/
-
-```
-
-
-
-Accepts:
-
-
-
-\- `.kml`
-
-\- `.zip` containing a Shapefile
-
-
-
-Example using `curl`:
-
-
+Example request:
 
 ```bash
-
-curl -X POST "http://127.0.0.1:8000/api/files/" \\
-
-&#x20; -H "accept: application/json" \\
-
-&#x20; -H "Content-Type: multipart/form-data" \\
-
-&#x20; -F "file=@sample\_data/test.kml"
-
+curl -X POST "http://127.0.0.1:8000/api/files/" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@sample_data/test.kml"
 ```
-
-
 
 Example response:
 
+```json
+{
+  "id": "14edff87-30e5-423c-ae5e-cd673ad2f386",
+  "filename": "test.kml",
+  "feature_count": 3,
+  "crs": "EPSG:4326",
+  "measurement_crs": "EPSG:32643",
+  "geometry_types": ["Point", "LineString", "Polygon"],
+  "status": "COMPLETED",
+  "measurements": [
+    {
+      "feature_id": 0,
+      "geometry_type": "Point",
+      "measurement": null,
+      "unit": null
+    }
+  ]
+}
+```
 
+In Swagger UI, the same upload flow is available from the `POST /api/files/` endpoint.
+The full upload response also includes the per-feature measurements.
+
+### 2. Get file metadata
+
+`GET /api/files/{file_id}/`
+
+Example request:
+
+```bash
+curl "http://127.0.0.1:8000/api/files/abc123"
+```
+
+Example response:
 
 ```json
-
 {
-
-&#x20; "id": "14edff87-30e5-423c-ae5e-cd673ad2f386",
-
-&#x20; "filename": "test.kml",
-
-&#x20; "feature\_count": 3,
-
-&#x20; "crs": "EPSG:4326",
-
-&#x20; "measurement\_crs": "EPSG:32643",
-
-&#x20; "geometry\_types": \[
-
-&#x20;   "Point",
-
-&#x20;   "LineString",
-
-&#x20;   "Polygon"
-
-&#x20; ],
-
-&#x20; "status": "COMPLETED",
-
-&#x20; "measurements": \[]
-
+  "id": "abc123",
+  "filename": "survey.kml",
+  "feature_count": 120,
+  "crs": "EPSG:4326",
+  "measurement_crs": "EPSG:32643",
+  "status": "COMPLETED"
 }
-
 ```
 
+### 3. Get measurements
 
+`GET /api/files/{file_id}/measurements/`
 
-The exact generated ID and measurement values depend on the uploaded file.
-
-
-
-\---
-
-
-
-\### 2. Get File Information
-
-
-
-```http
-
-GET /api/files/{id}
-
-```
-
-
-
-Example:
-
-
+Example request:
 
 ```bash
-
-curl "http://127.0.0.1:8000/api/files/<file\_id>"
-
+curl "http://127.0.0.1:8000/api/files/abc123/measurements"
 ```
 
-
-
-Returns the stored metadata and calculated measurements for the file.
-
-
-
-\---
-
-
-
-\### 3. Get Measurements
-
-
-
-```http
-
-GET /api/files/{id}/measurements
-
-```
-
-
-
-Example:
-
-
-
-```bash
-
-curl "http://127.0.0.1:8000/api/files/<file\_id>/measurements"
-
-```
-
-
-
-Example response structure:
-
-
+Example response:
 
 ```json
-
 {
-
-&#x20; "file\_id": "bad2b874-6900-45da-8e0a-2fe0d45b9436",
-
-&#x20; "filename": "test\_shapefile.zip",
-
-&#x20; "measurement\_crs": "EPSG:32643",
-
-&#x20; "feature\_count": 2,
-
-&#x20; "measurements": \[
-
-&#x20;   {
-
-&#x20;     "feature\_id": 0,
-
-&#x20;     "geometry\_type": "Polygon",
-
-&#x20;     "geometry": {},
-
-&#x20;     "crs": "EPSG:4326",
-
-&#x20;     "properties": {
-
-&#x20;       "name": "Test Polygon 1",
-
-&#x20;       "category": "polygon"
-
-&#x20;     },
-
-&#x20;     "measurement": 1201683.9190970361,
-
-&#x20;     "unit": "square\_meters"
-
-&#x20;   }
-
-&#x20; ]
-
+  "file_id": "abc123",
+  "filename": "survey.kml",
+  "measurement_crs": "EPSG:32643",
+  "feature_count": 2,
+  "measurements": [
+    {
+      "feature_id": 0,
+      "geometry_type": "Polygon",
+      "measurement": 1201683.91,
+      "unit": "square_meters"
+    }
+  ]
 }
-
 ```
 
+### 4. Health check
 
+`GET /`
 
-\---
+Example response:
 
-
-
-\## Setup
-
-
-
-\### 1. Clone the repository
-
-
-
-```bash
-
-git clone https://github.com/Faizan-9077/geospatial-file-measurement-api.git
-
-cd geospatial-file-measurement-api
-
+```json
+{
+  "message": "Geospatial File Measurement API is running"
+}
 ```
 
+## Architecture
 
-
-\### 2. Create a virtual environment
-
-
-
-Windows PowerShell:
-
-
-
-```powershell
-
-python -m venv venv
-
+```mermaid
+flowchart TD
+  A[Client] --> B[POST /api/files/]
+  B --> C[FastAPI route]
+  C --> D[Temporary upload]
+  D --> E[File processor]
+  E --> F{Input type}
+  F -->|KML| G[Read GeoDataFrame]
+  F -->|ZIP| H[Validate archive and extract shapefile]
+  G --> I[Detect source CRS]
+  H --> I
+  I --> J[Select measurement CRS]
+  J --> K[Transform geometries]
+  K --> L[Calculate area or length]
+  L --> M[Persist file record]
+  M --> N[Return JSON response]
 ```
 
+### Application structure
 
+The codebase is organized by responsibility:
 
-Activate it:
+- `app/main.py` initializes the FastAPI application
+- `app/api/routes/files.py` exposes the HTTP endpoints
+- `app/services/file_processor.py` reads KML and Shapefile inputs
+- `app/services/crs.py` selects the measurement CRS
+- `app/services/measurement.py` calculates geometry measurements
+- `app/services/serialization.py` prepares JSON-safe values
+- `app/services/storage.py` persists file records
 
+### File-processing flow
 
+1. The client uploads a `.kml` or `.zip` file.
+2. The file is stored temporarily in `uploads/`.
+3. The processor reads the geospatial content into a GeoDataFrame.
+4. The response metadata and measurements are generated.
+5. The temporary upload is removed after processing.
+6. The final record is stored in `data/files.json`.
 
-```powershell
+### Measurement calculation flow
 
-venv\\Scripts\\activate
+1. The geometry type is inspected.
+2. If the CRS is geographic, a projected CRS is selected for measurement.
+3. Polygons and multipolygons are measured by area.
+4. LineStrings and MultiLineStrings are measured by length.
+5. Points are returned without a measurement.
 
-```
+### CRS handling
 
+The application avoids measuring directly in geographic coordinates such as `EPSG:4326`.
+Instead, it selects a suitable projected CRS, typically a UTM zone, and transforms geometries before calculating area or length.
 
+## Design Decisions
 
-\### 3. Install dependencies
+### FastAPI
 
+FastAPI was chosen for its clean request handling, strong typing, and built-in OpenAPI documentation.
 
+### GeoPandas and Shapely
 
-```powershell
+GeoPandas simplifies file ingestion and CRS-aware geometry handling, while Shapely supports geometry inspection and measurement-friendly operations.
 
-pip install -r requirements.txt
+### File-based persistence
 
-```
+The project stores processed file metadata in JSON because the assignment focuses on API and geospatial processing rather than database infrastructure.
 
+### Temporary ZIP extraction
 
+ZIP archives are extracted into a temporary directory and validated before reading. This avoids leaving intermediate Shapefile components on disk and reduces security risk.
 
-\### 4. Start the server
+### Strict Shapefile validation
 
+The API rejects ZIP archives that are ambiguous or incomplete, including archives with multiple `.shp` files or missing required Shapefile components.
 
+### Measurement CRS selection
 
-```powershell
+A projected CRS is selected automatically for accurate metric measurements. An alternative would be to let the client choose the CRS, but that adds unnecessary complexity for this assignment.
 
-uvicorn app.main:app --reload
+## Learning
 
-```
+Through this project, I worked with:
 
+- FastAPI backend development
+- REST API design
+- Multipart file uploads
+- GeoPandas and Shapely
+- CRS handling and measurement conversion
+- KML and Shapefile processing
+- Secure ZIP extraction
+- JSON serialization of geospatial data
+- Automated testing with Pytest
 
+## Future Scope
 
-The API will be available at:
+For a production-scale version, the system could be extended with:
 
+- PostgreSQL + PostGIS for geospatial persistence
+- Background processing for large uploads
+- GeoJSON and GeoPackage support
+- User-selectable measurement CRS
+- Authentication and authorization
+- Structured logging and monitoring
+- File-size and resource limits
+- Pagination for large feature collections
 
+## Supported inputs
+
+- `.kml`
+- `.zip` containing one Shapefile with `.shp`, `.shx`, `.dbf`, and `.prj`
+
+## Supported measurements
+
+- Polygon / MultiPolygon: area
+- LineString / MultiLineString: length
+- Point: no measurement
+
+## Project structure
 
 ```text
-
-http://127.0.0.1:8000
-
-```
-
-
-
-Swagger documentation:
-
-
-
-```text
-
-http://127.0.0.1:8000/docs
-
-```
-
-
-
-\---
-
-
-
-\## Testing
-
-
-
-The project uses Pytest for automated testing.
-
-
-
-Run the complete test suite:
-
-
-
-```powershell
-
-pytest -v
-
-```
-
-
-
-Current test coverage includes:
-
-
-
-\### API Tests
-
-
-
-\- Root endpoint
-
-\- KML upload
-
-\- ZIP/Shapefile upload
-
-\- File retrieval
-
-\- Measurement retrieval
-
-\- Missing file handling
-
-
-
-\### File Processing Tests
-
-
-
-\- Valid Shapefile ZIP
-
-\- ZIP without `.shp`
-
-\- Missing Shapefile component
-
-\- Multiple Shapefiles
-
-\- ZIP path traversal protection
-
-
-
-\### CRS / Measurement Tests
-
-
-
-\- Polygon area
-
-\- MultiPolygon area
-
-\- LineString length
-
-\- MultiLineString length
-
-\- Point without measurement
-
-\- Projected CRS handling
-
-\- Missing CRS handling
-
-
-
-Current result:
-
-
-
-```text
-
-18 passed
-
-```
-
-
-
-\---
-
-
-
-\## Error Handling
-
-
-
-The API distinguishes between invalid input and unexpected server failures.
-
-
-
-\### Client / Input Errors
-
-
-
-Invalid geospatial input results in:
-
-
-
-```text
-
-HTTP 400 Bad Request
-
-```
-
-
-
-Examples include:
-
-
-
-\- Unsupported file format
-
-\- Invalid ZIP structure
-
-\- Missing Shapefile
-
-\- Missing required Shapefile components
-
-\- Multiple Shapefiles
-
-\- Unsafe ZIP paths
-
-\- Missing CRS
-
-
-
-\### Unexpected Errors
-
-
-
-Unexpected application failures return:
-
-
-
-```text
-
-HTTP 500 Internal Server Error
-
-```
-
-
-
-with a generic message rather than exposing internal implementation details.
-
-
-
-\---
-
-
-
-\## Data Storage
-
-
-
-For this assignment, processed file metadata is stored in:
-
-
-
-```text
+app/
+  main.py
+  api/routes/files.py
+  services/
+    crs.py
+    file_processor.py
+    measurement.py
+    serialization.py
+    storage.py
 
 data/files.json
-
+sample_data/test.kml
+tests/
+uploads/
 ```
 
+## Author
 
+Faizan Khan
 
-The storage layer is intentionally simple and file-based.
+B.Tech - Computer Engineering
 
-
-
-Uploaded source files are temporarily stored while being processed and are removed afterward.
-
-
-
-This keeps the implementation lightweight and avoids introducing unnecessary database infrastructure for the assignment.
-
-
-
-\---
-
-
-
-\## Design Decisions
-
-
-
-\### 1. FastAPI
-
-
-
-FastAPI provides a lightweight API framework with automatic OpenAPI/Swagger documentation and straightforward file-upload handling.
-
-
-
-\### 2. GeoPandas
-
-
-
-GeoPandas provides the main abstraction for reading geospatial files and working with geometries and CRS information.
-
-
-
-\### 3. Temporary ZIP Extraction
-
-
-
-ZIP contents are extracted into a temporary directory rather than permanently storing extracted Shapefile components.
-
-
-
-\### 4. Reject Ambiguous ZIPs
-
-
-
-A ZIP containing multiple Shapefiles is rejected instead of selecting one arbitrarily.
-
-
-
-This makes the API behavior deterministic.
-
-
-
-\### 5. Require `.prj`
-
-
-
-The `.prj` file is required because measurement calculations depend on knowing the coordinate reference system.
-
-
-
-\### 6. Projected CRS for Measurements
-
-
-
-Geographic coordinates are transformed into a suitable projected CRS before calculating area or length.
-
-
-
-This avoids returning measurements in meaningless degree-based units.
-
-
-
-\### 7. JSON Persistence
-
-
-
-A simple JSON storage layer was selected because the assignment does not require a database and the main focus is geospatial file processing.
-
-
-
-\---
-
-
-
-\## Learning
-
-
-
-Through this project, the main areas explored were:
-
-
-
-\- FastAPI file upload APIs
-
-\- GeoPandas and Shapely
-
-\- Shapefile structure
-
-\- Coordinate Reference Systems
-
-\- Geographic vs projected CRS
-
-\- UTM-based measurement
-
-\- Safe ZIP extraction
-
-\- Path traversal protection
-
-\- Temporary file handling
-
-\- JSON serialization of geospatial data
-
-\- REST API design
-
-\- Automated testing with Pytest
-
-\- API testing with FastAPI TestClient
-
-
-
-\---
-
-
-
-\## Future Scope
-
-
-
-Possible improvements for a production system include:
-
-
-
-\- PostgreSQL/PostGIS for persistent geospatial storage
-
-\- Asynchronous/background processing for large files
-
-\- File-size and resource limits
-
-\- More geospatial formats such as GeoJSON and GeoPackage
-
-\- Support for selecting a measurement CRS explicitly
-
-\- More advanced geometry validation and repair
-
-\- Authentication and authorization
-
-\- Object storage such as Amazon S3
-
-\- Structured logging and monitoring
-
-\- Pagination for very large feature collections
-
-\- More detailed API schemas and validation
-
-\- Containerization with Docker
-
-
-
-\---
-
-
-
-\## Project Status
-
-
-
-The current implementation supports the required assignment workflow:
-
-
-
-```text
-
-KML / ZIP Shapefile
-
-&#x20;       ↓
-
-Secure File Processing
-
-&#x20;       ↓
-
-Feature Extraction
-
-&#x20;       ↓
-
-CRS Detection
-
-&#x20;       ↓
-
-Projected CRS Transformation
-
-&#x20;       ↓
-
-Area / Length Measurement
-
-&#x20;       ↓
-
-Persistence
-
-&#x20;       ↓
-
-REST API
-
-```
-
-
-
-Automated test status:
-
-
-
-```text
-
-18 tests passed
-
-```
-
+Z.H. College of Engineering and Technology, Aligarh Muslim University
